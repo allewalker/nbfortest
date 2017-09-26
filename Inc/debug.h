@@ -1,8 +1,9 @@
 #ifndef __DEBUG_H__
 #define __DEBUG_H__
 #define DBG_BUF_SIZE (256)
-
-
+#define DBG_USART	USART1
+#define DBG_BR		(921600)
+#define DBG_DMA		DMA1_Channel4
 #if 1
 #define DBG_INFO(x,y...) DBG_Printf("%s %d:"x"\r\n", __FUNCTION__,__LINE__,##y)
 #define DBG_ERR(x,y...) DBG_Printf("%s %d:"x"\r\n", __FUNCTION__,__LINE__,##y)
@@ -30,7 +31,7 @@ typedef struct
 void DBG_Config(void);
 void DBG_HexPrintf(unsigned char *data, unsigned int len);
 void DBG_Printf(const char* format, ...);
-void DBG_Send(void);
+int32_t DBG_Send(void);
 void DBG_UsartReceive(uint8_t data);
 int DBG_GetData(void *Data, unsigned int Len);
 int DBG_ReturnBufLen(void);

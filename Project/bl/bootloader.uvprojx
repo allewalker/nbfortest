@@ -172,12 +172,12 @@
             <UseExternalTool>0</UseExternalTool>
             <RunIndependent>0</RunIndependent>
             <UpdateFlashBeforeDebugging>1</UpdateFlashBeforeDebugging>
-            <Capability>0</Capability>
-            <DriverSelection>-1</DriverSelection>
+            <Capability>1</Capability>
+            <DriverSelection>4096</DriverSelection>
           </Flash1>
           <bUseTDR>1</bUseTDR>
           <Flash2>BIN\UL2CM3.DLL</Flash2>
-          <Flash3></Flash3>
+          <Flash3>"" ()</Flash3>
           <Flash4></Flash4>
           <pFcarmOut></pFcarmOut>
           <pFcarmGrp></pFcarmGrp>
@@ -447,6 +447,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\Hal\setting.c</FilePath>
             </File>
+            <File>
+              <FileName>chip.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Hal\chip.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -496,11 +501,6 @@
               <FileName>stm32f10x_it.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\Platform\stm32f10x_it.c</FilePath>
-            </File>
-            <File>
-              <FileName>system_stm32f10x.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\Platform\system_stm32f10x.c</FilePath>
             </File>
             <File>
               <FileName>startup_stm32f10x_md.s</FileName>

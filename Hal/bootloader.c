@@ -1,66 +1,142 @@
 #include "user.h"
 System_Struct gSys;
 
-void bootloader_PrintInfo(void)
+__asm void MSR_MSP ( uint32_t ulAddr )
 {
+    MSR MSP, r0 			                   //set Main Stack value
+    BX r14
+}
 
-	int8_t Buf[4][6];
-	char *strMon[12] = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
-	int Day,Year,Month,Hour,Min,Sec,i;
-	CmdParam CP;
-	memset(&CP, 0, sizeof(CP));
-	memset(Buf, 0, sizeof(Buf));
-	CP.param_max_len = 6;
-	CP.param_max_num = 4;
-	CP.param_str = (int8_t *)Buf;
-	CmdParseParam(__DATE__, &CP, ' ');
-	Month = 0;
-	for (i = 0; i < 12; i++)
+//跳转到应用程序段
+//ulAddr_App:用户代码起始地址.
+void IAP_ExecuteApp ( uint32_t ulAddr_App )
+{
+	MainFun_t MainFun;
+
+	if ( ( ( * ( vu32 * ) ulAddr_App ) & 0x2FFE0000 ) == 0x20000000 )	  //检查栈顶地址是否合法.
 	{
-		if (!strcmp(strMon[i], Buf[0]))
-		{
-			Month = i + 1;
-		}
+		MainFun = ( MainFun_t ) * ( vu32 * ) ( ulAddr_App + 4 );	//用户代码区第二个字为程序开始地址(复位地址)
+		MSR_MSP ( * ( vu32 * ) ulAddr_App );					                            //初始化APP堆栈指针(用户代码区的第一个字用于存放栈顶地址)
+		MainFun ();								                                    	//跳转到APP.
 	}
+}
 
-	if (Buf[1][0])
+void Upgrade_MainFlash(void)
+{
+	uint32_t CRC32;
+	uint32_t AppAddr;
+	uint32_t UpgradeAddr;
+	uint32_t SectorLen;
+	uint32_t i;
+	uint8_t Retry;
+
+	if (gSys.Var[FLASH_SIZE] > (128 * 1024))
 	{
-		Day = strtol(Buf[1], NULL, 10);
-		Year = strtol(Buf[2], NULL, 10);
+		SectorLen = 2048;
 	}
 	else
 	{
-		Day = strtol(Buf[2], NULL, 10);
-		Year = strtol(Buf[3], NULL, 10);
+		SectorLen = 1024;
 	}
 
-
-	CP.param_num = 0;
-	memset(Buf, 0, sizeof(Buf));
-
-	CP.param_str = (int8_t *)Buf;
-	CmdParseParam(__TIME__, &CP, ':');
-	Hour = strtol(Buf[0], NULL, 10);
-	Min = strtol(Buf[1], NULL, 10);
-	Sec = strtol(Buf[2], NULL, 10);
-	DBG_INFO("\r\nCLK %dMHz Build in %d %d %d %d:%d:%d",
-			gSys.Var[SYS_FRQ]/1000000, Year, Month, Day, Hour, Min, Sec);
-
-	if (Year >= 1000)
+	if (gSys.AppStore.UpgradeEntry % 4)
 	{
-		Year %= 1000;
+		DBG("upgrade entry addr error! %x\r\n", gSys.AppStore.UpgradeEntry);
+		goto CLEAR_UPGRADE;
 	}
-	gSys.Var[VERSION] = ( Year * 12 + Month) * 1000000 + Day * 10000 + Hour * 100 + Min;
+
+	if ( (gSys.AppStore.UpgradeEntry + gSys.AppStore.UpgradeSector * SectorLen) > gSys.Var[FLASH_SIZE])
+	{
+		DBG("upgrade file len error! %d %d\r\n",
+				gSys.AppStore.UpgradeEntry + gSys.AppStore.UpgradeSector * SectorLen,
+				gSys.Var[FLASH_SIZE]);
+		goto CLEAR_UPGRADE;
+	}
+
+	if (gSys.AppStore.UpgradeEntry < ((gSys.Var[FLASH_SIZE] + APP_FLASH_START) / 2))
+	{
+		DBG("upgrade entry error! %x %x\r\n", gSys.AppStore.UpgradeEntry,
+				(gSys.Var[FLASH_SIZE] + APP_FLASH_START) / 2);
+		goto CLEAR_UPGRADE;
+	}
+
+	CRC32 = ~CRC32_Cal(gSys.CRC32_Table, (uint8_t *)gSys.AppStore.UpgradeEntry,
+			gSys.AppStore.UpgradeSector * SectorLen,
+			CRC32_START);
+	if (CRC32 != gSys.AppStore.UpgradeCRC32)
+	{
+		DBG("upgrade crc32 error! %x %x\r\n", gSys.AppStore.UpgradeCRC32,
+				CRC32);
+		goto CLEAR_UPGRADE;
+	}
+
+	for (i = 0; i < gSys.AppStore.UpgradeSector; i++)
+	{
+		AppAddr = FLASH_BASE|APP_FLASH_START + SectorLen * i;
+		UpgradeAddr = gSys.AppStore.UpgradeEntry + SectorLen * i;
+		for (Retry = 0; Retry < 3; Retry++)
+		{
+			NVRAM_Erase(AppAddr);
+			NVRAM_Write(AppAddr, (void *)UpgradeAddr, SectorLen);
+			if (memcmp((void *)AppAddr, (void *)UpgradeAddr, SectorLen))
+			{
+				DBG("sector %d copy error!", i);
+			}
+			else
+			{
+				break;
+			}
+		}
+	}
+	DBG("upgrade done!");
+CLEAR_UPGRADE:
+	gSys.AppStore.UpgradeReq = 0;
+	gSys.AppStore.UpgradeType = 0;
+	gSys.AppStore.UpgradeEntry = 0;
+	gSys.AppStore.UpgradeSector = 0;
+	gSys.AppStore.UpgradeCRC32 = 0;
+	APP_ParamLS(PARAM_LS_SAVE);
 }
 
 int main(void)
 {
+	uint32_t To;
+
 	DBG_Config();
-	Config_Init();
-	DBG("\r\nbootloader build in %s %s", __DATE__, __TIME__);
-	NVRAM_Erase(0x08010000);
-	while(1)
+	System_VarInit();
+	DBG("\r\nbootloader build in %s %s\r\n", __DATE__, __TIME__);
+	DBG("SYS_CLK %d ID %x %x %x FlashSize %d\r\n", gSys.Var[SYS_FRQ],
+			gSys.Var[CHIP_ID2], gSys.Var[CHIP_ID1], gSys.Var[CHIP_ID0],
+			gSys.Var[FLASH_SIZE]);
+
+	DBG_Send();
+
+	if (gSys.AppStore.UpgradeReq)
 	{
-		//DBG_Send();
+		DBG("upgrade require find\r\n");
+		switch (gSys.AppStore.UpgradeType)
+		{
+		case UPGRADE_TYPE_MAIN_FLASH:
+			break;
+		case UPGRADE_TYPE_SPI_FLASH:
+			break;
+		}
+	}
+
+
+
+BOOT_APP:
+	To = gSys.Var[SYS_FRQ] / 100;
+	while(To--)
+	{
+		if (DBG_Send() == 0)
+		{
+			break;
+		}
+	}
+	while (1)
+	{
+		IAP_ExecuteApp (FLASH_BASE|APP_FLASH_START);    //执行RAM APP代码
+		DBG_Send();
 	}
 }

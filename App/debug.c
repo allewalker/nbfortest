@@ -34,7 +34,8 @@ void DBG_CB(void *pData)
 void DBG_Config(void)
 {
 	InitRBuffer(&gSys.TraceBuffer, gSys.TraceData, DBG_BUF_SIZE, 1);
-	//Uart_Config(DBG_UART_ID, 921600, DBG_CB, 1);
+	Uart_Config(DBG_UART_ID, DBG_BR, DBG_CB, 1);
+
 }
 
 
@@ -43,13 +44,18 @@ void DBG_Config(void)
   * @param  None
   * @retval None
   */
-void DBG_Send(void)
+int32_t DBG_Send(void)
 {
 	uint16_t TxLen;
 	if (!gSys.Uart[DBG_UART_ID].IsBusy && gSys.TraceBuffer.Len)
 	{
 		TxLen = ReadRBuffer(&gSys.TraceBuffer, gSys.TraceDMA, gSys.TraceBuffer.Len);
 		Uart_Tx(DBG_UART_ID, gSys.TraceDMA, TxLen);
+		return TxLen;
+	}
+	else
+	{
+		return -1;
 	}
 }
 
