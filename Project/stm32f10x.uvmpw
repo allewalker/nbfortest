@@ -13,7 +13,7 @@
   </project>
 
   <project>
-    <PathAndName>.\test\test.uvprojx</PathAndName>
+    <PathAndName>.\dtu\dtu.uvprojx</PathAndName>
     <NodeIsActive>1</NodeIsActive>
     <NodeIsExpanded>1</NodeIsExpanded>
   </project>
