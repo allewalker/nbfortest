@@ -24,4 +24,8 @@ typedef struct
 int Uart_Config(uint8_t UartID, uint32_t BR, MyCBFun_t IrqCB, uint8_t IsDMATx);
 void Uart_Tx(uint8_t UartID, void *Src, uint16_t Len);
 uint8_t Uart_Rx(uint8_t UartID);
+int32_t Uart_RxDMAInit(uint8_t UartID);
+int32_t Uart_RxDMAStart(uint8_t UartID, uint8_t *Buf, uint16_t Len);
+uint16_t Uart_RxDMAGetSize(uint8_t UartID);
+int32_t Uart_RxDMAStop(uint8_t UartID);
 #endif

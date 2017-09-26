@@ -197,7 +197,7 @@ void SystemInit (void)
 	SCB->VTOR = FLASH_BASE | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal FLASH. */
 	/* 使能全部外设时钟 */
 	RCC->AHBENR = 0xffffffff;
-	RCC->APB1ENR = 0xffffffff;
+	RCC->APB1ENR = 0xffffffff & (~RCC_APB1Periph_I2C2); //close i2c2, enable uart3
 	RCC->APB2ENR = 0xffffffff;
 
 }

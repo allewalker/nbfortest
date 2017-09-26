@@ -33,6 +33,11 @@
 #undef __CUST_TYPE__
 #define __CUST_TYPE__				__CUST_MAIN_APP__
 #endif
+
+//#define __UART1_RX_DMA__
+#define __UART2_RX_DMA__
+//#define __UART3_RX_DMA__
+
 enum VAR_ENUM
 {
 	CHIP_ID0,

@@ -1,8 +1,8 @@
 #include "user.h"
 
 static const USART_TypeDef* hwUart[3] = {USART1, USART2, USART3};
-static const DMA_Channel_TypeDef* hwUartTxDMA[3] = {DMA1_Channel4, DMA1_Channel2, DMA1_Channel7};
-
+static const DMA_Channel_TypeDef* hwUartTxDMA[3] = {DMA1_Channel4, DMA1_Channel7, DMA1_Channel2};
+static const DMA_Channel_TypeDef* hwUartRxDMA[3] = {DMA1_Channel5, DMA1_Channel6, DMA1_Channel3};
 void Uart_DummyCB(void *pData)
 {
 
@@ -51,8 +51,8 @@ int Uart_Config(uint8_t UartID, uint32_t BR, MyCBFun_t IrqCB, uint8_t IsDMATx)
 		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
 		GPIO_Init(GPIOA, &GPIO_InitStructure);
 		IrqChannel = USART2_IRQn;
-		DMAIrqChannel = DMA1_Channel2_IRQn;
-		ClearFlag = DMA_IFCR_CGIF2|DMA_IFCR_CTCIF2|DMA_IFCR_CHTIF2|DMA_IFCR_CTEIF2;
+		DMAIrqChannel = DMA1_Channel7_IRQn;
+		ClearFlag = DMA_IFCR_CGIF7|DMA_IFCR_CTCIF7|DMA_IFCR_CHTIF7|DMA_IFCR_CTEIF7;
 		break;
 	case UART_ID3:
 		GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;
@@ -63,11 +63,10 @@ int Uart_Config(uint8_t UartID, uint32_t BR, MyCBFun_t IrqCB, uint8_t IsDMATx)
 		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
 		GPIO_Init(GPIOB, &GPIO_InitStructure);
 		IrqChannel = USART3_IRQn;
-		DMAIrqChannel = DMA1_Channel7_IRQn;
-		ClearFlag = DMA_IFCR_CGIF7|DMA_IFCR_CTCIF7|DMA_IFCR_CHTIF7|DMA_IFCR_CTEIF7;
+		DMAIrqChannel = DMA1_Channel2_IRQn;
+		ClearFlag = DMA_IFCR_CGIF2|DMA_IFCR_CTCIF2|DMA_IFCR_CHTIF2|DMA_IFCR_CTEIF2;
 		break;
 	}
-
 
 	USART_ITConfig(Uart, USART_IT_RXNE, ENABLE);
 //	USART_ITConfig(WIFIUSART, USART_IT_TC, ENABLE);
@@ -121,6 +120,90 @@ uint8_t Uart_Rx(uint8_t UartID)
 {
 	USART_TypeDef* Uart = (USART_TypeDef* )hwUart[UartID];
 	return Uart->DR;
+}
+
+int32_t Uart_RxDMAInit(uint8_t UartID)
+{
+	DMA_Channel_TypeDef *DMA;
+	USART_TypeDef* Uart;
+	DMA_InitTypeDef DMA_InitStructure;
+#ifdef __UART2_RX_DMA__
+	if (UartID != UART_ID2)
+	{
+		return -1;
+	}
+	Uart = (USART_TypeDef* )hwUart[UartID];
+	DMA = (DMA_Channel_TypeDef *)hwUartRxDMA[UartID];
+	DMA_Cmd(DMA, DISABLE);
+	DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&Uart->DR;//外设地址
+	DMA_InitStructure.DMA_MemoryBaseAddr = NULL;//内存地址
+	DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;//dma传输方向单向
+	DMA_InitStructure.DMA_BufferSize = 0;//设置DMA在传输时缓冲区的长度 word
+	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;//设置DMA的外设递增模式，一个外设
+	DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;//设置DMA的内存递增模式，
+	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;//外设数据字长
+	DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;//内存数据字长
+	DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;//设置DMA的传输模式
+	DMA_InitStructure.DMA_Priority = DMA_Priority_High;//设置DMA的优先级别
+	DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;//设置DMA的2个memory中的变量互相访问
+	DMA_Init(DMA, &DMA_InitStructure);
+	USART_DMACmd(Uart, USART_DMAReq_Rx, ENABLE);
+	DMA1->IFCR = 0XFFFFFFFF;
+	return 0;
+#endif
+	return -1;
+}
+
+int32_t Uart_RxDMAStart(uint8_t UartID, uint8_t *Buf, uint16_t Len)
+{
+	DMA_Channel_TypeDef *DMA;
+	USART_TypeDef* Uart;
+#ifdef __UART2_RX_DMA__
+	if (UartID != UART_ID2)
+	{
+		return -1;
+	}
+	Uart = (USART_TypeDef* )hwUart[UartID];
+	DMA = (DMA_Channel_TypeDef *)hwUartRxDMA[UartID];
+	USART_ITConfig(Uart, USART_IT_RXNE, DISABLE);
+	DMA->CMAR = (uint32_t)Buf;
+	DMA->CNDTR = Len;
+	DMA_Cmd(DMA, ENABLE);
+	return 0;
+#endif
+	return -1;
+}
+
+uint16_t Uart_RxDMAGetSize(uint8_t UartID)
+{
+	DMA_Channel_TypeDef *DMA;
+#ifdef __UART2_RX_DMA__
+	if (UartID != UART_ID2)
+	{
+		return 0;
+	}
+	DMA = (DMA_Channel_TypeDef *)hwUartRxDMA[UartID];
+	return DMA->CNDTR;
+#endif
+	return 0;
+}
+
+int32_t Uart_RxDMAStop(uint8_t UartID)
+{
+	DMA_Channel_TypeDef *DMA;
+	USART_TypeDef* Uart;
+#ifdef __UART2_RX_DMA__
+	if (UartID != UART_ID2)
+	{
+		return -1;
+	}
+	Uart = (USART_TypeDef* )hwUart[UartID];
+	DMA = (DMA_Channel_TypeDef *)hwUartRxDMA[UartID];
+	DMA_Cmd(DMA, DISABLE);
+	USART_ITConfig(Uart, USART_IT_RXNE, ENABLE);
+	return 0;
+#endif
+	return -1;
 }
 
 void Uart_Tx(uint8_t UartID, void *Src, uint16_t Len)
