@@ -89,7 +89,7 @@ void DBG_HexPrintf(unsigned char *data, unsigned int len)
 
 void DBG_Printf(const char* format, ...)
 {
-#if 1
+#if (__CUST_TYPE__ == __CUST_BOOTLOADER__)
 	char c;
 	char *s = 0;
 	int d = 0, i = 0, p = 0;
