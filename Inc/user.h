@@ -19,7 +19,7 @@
 #include "setting.h"
 #include "timer.h"
 #include "usart.h"
-
+#include "at.h"
 #define APP_FLASH_START				(0x00004000)
 #define BL_PARAM_START				(0x00003000)
 #define APP_PARAM_START				(0x00003800)
@@ -34,9 +34,7 @@
 #define __CUST_TYPE__				__CUST_MAIN_APP__
 #endif
 
-//#define __UART1_RX_DMA__
-#define __UART2_RX_DMA__
-//#define __UART3_RX_DMA__
+#define RX_DMA_UART_ID	UART_ID2
 
 enum VAR_ENUM
 {

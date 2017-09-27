@@ -3,7 +3,6 @@
 void Timer_Config(void)
 {
 	SysTick_Config(gSys.Var[SYS_FRQ]/TIMER_BASE);
-	SysTick->CTRL &= ~SysTick_CTRL_ENABLE_Msk;
 }
 
 void Timer_Task(void)
@@ -24,10 +23,6 @@ int Timer_Start(uint8_t ID, uint32_t To, uint8_t IsRepeat, MyCBFun_t CB)
 	if (ID >= TIMER_MAX)
 	{
 		return -1;
-	}
-	if (!(SysTick->CTRL & SysTick_CTRL_ENABLE_Msk))
-	{
-		SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
 	}
 
 	gSys.TimerList[ID].LastTime = To;
@@ -72,12 +67,10 @@ void Timer_Del(uint8_t ID)
 void SysTick_Handler(void)
 {
 	uint8_t i, StopFlag;
-	StopFlag = 1;
 	for(i = 0; i < TIMER_MAX; i++)
 	{
 		if (gSys.TimerList[i].Work)
 		{
-			StopFlag = 0;
 			if (gSys.TimerList[i].LastTime)
 			{
 				gSys.TimerList[i].LastTime--;
@@ -85,7 +78,6 @@ void SysTick_Handler(void)
 
 			if (!gSys.TimerList[i].LastTime)
 			{
-				gSys.TimerList[i].ToFlag = 1;
 				if (gSys.TimerList[i].ReloadTime)
 				{
 					gSys.TimerList[i].LastTime = gSys.TimerList[i].ReloadTime;
@@ -94,11 +86,8 @@ void SysTick_Handler(void)
 				{
 					gSys.TimerList[i].Work = 0;
 				}
+				gSys.TimerList[i].ToFlag = 1;
 			}
 		}
-	}
-	if (StopFlag)
-	{
-		SysTick->CTRL &= ~SysTick_CTRL_ENABLE_Msk;
 	}
 }

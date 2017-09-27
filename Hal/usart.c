@@ -127,8 +127,8 @@ int32_t Uart_RxDMAInit(uint8_t UartID)
 	DMA_Channel_TypeDef *DMA;
 	USART_TypeDef* Uart;
 	DMA_InitTypeDef DMA_InitStructure;
-#ifdef __UART2_RX_DMA__
-	if (UartID != UART_ID2)
+
+	if (UartID != RX_DMA_UART_ID)
 	{
 		return -1;
 	}
@@ -150,50 +150,46 @@ int32_t Uart_RxDMAInit(uint8_t UartID)
 	USART_DMACmd(Uart, USART_DMAReq_Rx, ENABLE);
 	DMA1->IFCR = 0XFFFFFFFF;
 	return 0;
-#endif
-	return -1;
 }
 
 int32_t Uart_RxDMAStart(uint8_t UartID, uint8_t *Buf, uint16_t Len)
 {
 	DMA_Channel_TypeDef *DMA;
 	USART_TypeDef* Uart;
-#ifdef __UART2_RX_DMA__
-	if (UartID != UART_ID2)
+
+	if (UartID != RX_DMA_UART_ID)
 	{
 		return -1;
 	}
 	Uart = (USART_TypeDef* )hwUart[UartID];
 	DMA = (DMA_Channel_TypeDef *)hwUartRxDMA[UartID];
 	USART_ITConfig(Uart, USART_IT_RXNE, DISABLE);
+	DMA_Cmd(DMA, DISABLE);
 	DMA->CMAR = (uint32_t)Buf;
 	DMA->CNDTR = Len;
 	DMA_Cmd(DMA, ENABLE);
 	return 0;
-#endif
-	return -1;
+
 }
 
 uint16_t Uart_RxDMAGetSize(uint8_t UartID)
 {
 	DMA_Channel_TypeDef *DMA;
-#ifdef __UART2_RX_DMA__
-	if (UartID != UART_ID2)
+
+	if (UartID != RX_DMA_UART_ID)
 	{
 		return 0;
 	}
 	DMA = (DMA_Channel_TypeDef *)hwUartRxDMA[UartID];
 	return DMA->CNDTR;
-#endif
-	return 0;
 }
 
 int32_t Uart_RxDMAStop(uint8_t UartID)
 {
 	DMA_Channel_TypeDef *DMA;
 	USART_TypeDef* Uart;
-#ifdef __UART2_RX_DMA__
-	if (UartID != UART_ID2)
+
+	if (UartID != RX_DMA_UART_ID)
 	{
 		return -1;
 	}
@@ -202,8 +198,7 @@ int32_t Uart_RxDMAStop(uint8_t UartID)
 	DMA_Cmd(DMA, DISABLE);
 	USART_ITConfig(Uart, USART_IT_RXNE, ENABLE);
 	return 0;
-#endif
-	return -1;
+
 }
 
 void Uart_Tx(uint8_t UartID, void *Src, uint16_t Len)

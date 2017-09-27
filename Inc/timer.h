@@ -15,8 +15,7 @@ typedef struct
 /*********************************TimerList*****************************************/
 enum
 {
-	CORE_TIMER,
-	MODBUS_TIMER,
+	AT_RX_TIMER,
 	TIMER_MAX
 };
 void Timer_Config(void);
