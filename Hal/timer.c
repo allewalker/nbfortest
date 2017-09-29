@@ -5,7 +5,7 @@ void Timer_Config(void)
 	SysTick_Config(gSys.Var[SYS_FRQ]/TIMER_BASE);
 }
 
-void Timer_Task(void)
+void Timer_Task(void *Param)
 {
 	uint8_t i;
 	for (i = 0; i < TIMER_MAX; i++)

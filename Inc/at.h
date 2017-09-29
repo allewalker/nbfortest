@@ -33,7 +33,7 @@ void AT_Init(void);
 void AT_AddCmd(int8_t *Cmd, int8_t *Param, uint8_t Type, uint32_t To, MyCBFun_t CB);
 void AT_AddReadCmd(int8_t *Cmd, MyCBFun_t CB);
 void AT_AddRunCmd(int8_t *Cmd, MyCBFun_t CB);
-void AT_Task(void);
+void AT_Task(void *Param);
 void AT_SendRawData(uint8_t *Data, uint16_t Len);
 void AT_FinishCmd(void);
 void AT_Reset(void);

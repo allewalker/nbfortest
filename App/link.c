@@ -19,3 +19,8 @@ void Link_TxData(void)
 {
 
 }
+
+void Link_Task(void *Param)
+{
+
+}

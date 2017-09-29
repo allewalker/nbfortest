@@ -476,7 +476,7 @@ void AT_AddCmd(int8_t *Cmd, int8_t *Param, uint8_t Type, uint32_t To, MyCBFun_t 
 	}
 }
 
-void AT_Task(void)
+void AT_Task(void *Param)
 {
 	uint16_t i;
 	if (gAT.NewAnalyzeFlag)
