@@ -15,7 +15,9 @@ typedef struct
 /*********************************TimerList*****************************************/
 enum
 {
-	AT_RX_TIMER,
+	AT_RX_TIMER,	//AT RX 接收超时
+	AT_RUN_TIMER,	//AT指令执行
+	COM_RX_TIMER,	//COM RX 接收超时
 	TIMER_MAX
 };
 void Timer_Config(void);

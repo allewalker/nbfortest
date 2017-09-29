@@ -17,10 +17,13 @@ void System_VarInit(void)
 	gSys.Var[CHIP_ID1] = *(uint32_t *)(CPUID_BASE + 4);
 	gSys.Var[CHIP_ID2] = *(uint32_t *)(CPUID_BASE + 8);
 	CRC32_CreateTable(gSys.CRC32_Table, 0x04C11DB7);
+#ifdef __SYS_START_FROM_BOOTLOADER__
 	BL_ParamLS(PARAM_LS_LOAD);
 	APP_ParamLS(PARAM_LS_LOAD);
+#endif
 }
 
+#ifdef __SYS_START_FROM_BOOTLOADER__
 void BL_ParamLS(uint8_t IsSave)
 {
 	BL_ParamStoreStruct BL;
@@ -73,3 +76,4 @@ void APP_ParamLS(uint8_t IsSave)
 	NVRAM_Write(FLASH_BASE|APP_PARAM_START, &APP, sizeof(APP));
 	return ;
 }
+#endif

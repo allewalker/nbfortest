@@ -116,9 +116,27 @@ int Uart_Config(uint8_t UartID, uint32_t BR, MyCBFun_t IrqCB, uint8_t IsDMATx)
 	return 0;
 }
 
+void Uart_Switch(uint8_t UartID, uint8_t OnOff)
+{
+	USART_TypeDef* Uart;
+	if (UartID != RX_DMA_UART_ID)
+	{
+		return;
+	}
+	Uart = (USART_TypeDef* )hwUart[UartID];
+	USART_Cmd(Uart, (OnOff)?ENABLE:DISABLE);
+}
+
+
+
 uint8_t Uart_Rx(uint8_t UartID)
 {
-	USART_TypeDef* Uart = (USART_TypeDef* )hwUart[UartID];
+	USART_TypeDef* Uart;
+	if (UartID != RX_DMA_UART_ID)
+	{
+		return 0;
+	}
+	Uart = (USART_TypeDef* )hwUart[UartID];
 	return Uart->DR;
 }
 
@@ -147,7 +165,7 @@ int32_t Uart_RxDMAInit(uint8_t UartID)
 	DMA_InitStructure.DMA_Priority = DMA_Priority_High;//设置DMA的优先级别
 	DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;//设置DMA的2个memory中的变量互相访问
 	DMA_Init(DMA, &DMA_InitStructure);
-	USART_DMACmd(Uart, USART_DMAReq_Rx, ENABLE);
+	USART_DMACmd(Uart, USART_DMAReq_Rx, DISABLE);
 	DMA1->IFCR = 0XFFFFFFFF;
 	return 0;
 }
@@ -164,6 +182,7 @@ int32_t Uart_RxDMAStart(uint8_t UartID, uint8_t *Buf, uint16_t Len)
 	Uart = (USART_TypeDef* )hwUart[UartID];
 	DMA = (DMA_Channel_TypeDef *)hwUartRxDMA[UartID];
 	USART_ITConfig(Uart, USART_IT_RXNE, DISABLE);
+	USART_DMACmd(Uart, USART_DMAReq_Rx, ENABLE);
 	DMA_Cmd(DMA, DISABLE);
 	DMA->CMAR = (uint32_t)Buf;
 	DMA->CNDTR = Len;
@@ -196,6 +215,7 @@ int32_t Uart_RxDMAStop(uint8_t UartID)
 	Uart = (USART_TypeDef* )hwUart[UartID];
 	DMA = (DMA_Channel_TypeDef *)hwUartRxDMA[UartID];
 	DMA_Cmd(DMA, DISABLE);
+	USART_DMACmd(Uart, USART_DMAReq_Rx, DISABLE);
 	USART_ITConfig(Uart, USART_IT_RXNE, ENABLE);
 	return 0;
 
@@ -204,8 +224,17 @@ int32_t Uart_RxDMAStop(uint8_t UartID)
 void Uart_Tx(uint8_t UartID, void *Src, uint16_t Len)
 {
 	DMA_Channel_TypeDef *DMA;
-	USART_TypeDef* Uart = (USART_TypeDef* )hwUart[UartID];
+	USART_TypeDef* Uart;
 	if (UartID >= UART_MAX)
+	{
+		return ;
+	}
+	Uart = (USART_TypeDef* )hwUart[UartID];
+	if (Uart->CR1 & USART_CR1_UE)
+	{
+
+	}
+	else
 	{
 		return ;
 	}

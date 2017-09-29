@@ -1,9 +1,7 @@
 #ifndef __DEBUG_H__
 #define __DEBUG_H__
 #define DBG_BUF_SIZE (256)
-#define DBG_USART	USART1
-#define DBG_BR		(921600)
-#define DBG_DMA		DMA1_Channel4
+
 #if 1
 #define DBG_INFO(x,y...) DBG_Printf("%s %d:"x"\r\n", __FUNCTION__,__LINE__,##y)
 #define DBG_ERR(x,y...) DBG_Printf("%s %d:"x"\r\n", __FUNCTION__,__LINE__,##y)

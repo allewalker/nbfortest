@@ -2,15 +2,35 @@
 #define __CONFIG_H__
 #define __RO__ const
 #define TIMER_BASE	(1000)
-#define FLASH_PAGE_SIZE	(1024)
-#define FLASH_ATOM_SIZE	(128)
-#define USERDATA_START ((u32)0x0800DC00) //55K
-#define BULK_MAX_LEN	(4160)	//自定义的块传输包最大长度 4k+64
-#define DBG_USART_BR	(921600)
-#define USER_USART_BR	(460800)
-#define WIFI_USART_BR	(74880)
-#define WIFIUSART_TXBUF_LEN	(2048)
-#define WIFIUSART_RXBUF_LEN	(64)
+#define BULK_MAX_LEN (4160)
+
+#define APP_FLASH_START				(0x00004000)
+#define BL_PARAM_START				(0x00003000)
+#define APP_PARAM_START				(0x00003800)
+
+#define __CUST_BOOTLOADER__			(0)
+#define __CUST_MAIN_APP__			(1)
+//#define __SYS_START_FROM_BOOTLOADER__
+#define __CUST_TYPE__				__CUST_MAIN_APP__
+
+#ifndef __SYS_START_FROM_BOOTLOADER__
+#undef __CUST_TYPE__
+#define __CUST_TYPE__				__CUST_MAIN_APP__
+#endif
+
+#define RX_DMA_UART_ID	UART_ID2
+
+#define DBG_UART_ID UART_ID1
+#define AT_UART_ID	UART_ID2
+#define AT_BR		(921600)
+#define DBG_BR		(921600)
+
+/**********************************ERROR NO**********************************************/
+enum
+{
+	ERROR_AT_CMD_TO = -1,
+	ERROR_AT_ANALYZE_STATE = -2,
+};
 
 /**********************************IRQ LEVEL*********************************************/
 enum

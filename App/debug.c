@@ -6,7 +6,7 @@
 #include "user.h"
 #define FIND_HEAD 0
 #define FIND_TAIL 64
-#define DBG_UART_ID UART_ID1
+
 
 ///* Private typedef -----------------------------------------------------------*/
 //typedef char * uart_va_list;

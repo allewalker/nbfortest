@@ -16,6 +16,7 @@ int main(void)
 	while (1)
 	{
 		Timer_Task();
+		AT_Task();
 		DBG_Send();
 	}
 }

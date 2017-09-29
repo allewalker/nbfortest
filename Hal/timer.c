@@ -66,7 +66,7 @@ void Timer_Del(uint8_t ID)
   */
 void SysTick_Handler(void)
 {
-	uint8_t i, StopFlag;
+	uint8_t i;
 	for(i = 0; i < TIMER_MAX; i++)
 	{
 		if (gSys.TimerList[i].Work)
