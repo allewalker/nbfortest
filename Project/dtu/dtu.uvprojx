@@ -427,6 +427,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\App\at.c</FilePath>
             </File>
+            <File>
+              <FileName>link.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\App\link.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

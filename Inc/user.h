@@ -47,6 +47,7 @@ typedef struct
 	RBuffer TraceBuffer;
 	uint8_t TraceData[DBG_BUF_SIZE];
 	uint8_t TraceDMA[DBG_BUF_SIZE];
+	Link_CtrlStruct *LinkCtrl;
 #ifdef __SYS_START_FROM_BOOTLOADER__
 	BL_ParamStruct BLStore;
 	APP_ParamStruct AppStore;

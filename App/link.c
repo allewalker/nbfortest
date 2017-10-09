@@ -1,8 +1,9 @@
 #include "user.h"
-
+static Link_CtrlStruct gLink;
 void Link_Init(void)
 {
-
+	gSys.LinkCtrl = &gLink;
+	gLink.Stage = LINK_STATE_INIT;
 }
 
 void Link_UrcAnalyze(int8_t *Str)
