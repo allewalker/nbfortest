@@ -127,15 +127,9 @@ void Uart_Switch(uint8_t UartID, uint8_t OnOff)
 	USART_Cmd(Uart, (OnOff)?ENABLE:DISABLE);
 }
 
-
-
 uint8_t Uart_Rx(uint8_t UartID)
 {
 	USART_TypeDef* Uart;
-	if (UartID != RX_DMA_UART_ID)
-	{
-		return 0;
-	}
 	Uart = (USART_TypeDef* )hwUart[UartID];
 	return Uart->DR;
 }

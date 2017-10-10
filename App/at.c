@@ -3,6 +3,7 @@
 #define AT_DMA_LEN	(128)
 #define AT_TX_LEN	(16)
 #define AT_RESULT_LEN	(128)
+#define AT_UART_TO		(3)
 enum
 {
 	LLPARSE_STATE_IDLE,		/* idle, not parsing a response */
@@ -38,7 +39,7 @@ typedef struct
 	uint32_t ResultCnt;
 	uint8_t Payload[AT_RX_LEN];
 	uint16_t PayloadCnt;
-	uint16_t PayloadMax;
+	uint16_t PayloadMax;			//socket/sms 需要接收的长度
 	uint8_t TxDMABuf[AT_DMA_LEN];
 	uint8_t RxDMABuf[AT_RX_LEN];	//本次接收的字节
 	uint8_t AnalyzeBuf[AT_RX_LEN];	//需要解析的数据区
@@ -78,6 +79,7 @@ static void AT_UartTimerCB(void *pData)
 		memcpy(&gAT.AnalyzeBuf, gAT.RxDMABuf, CopySize);
 		gAT.AnalyzeSize = CopySize;
 		gAT.NewAnalyzeFlag = 1;
+		gAT.AnalyzeBuf[gAT.AnalyzeSize] = 0;
 	}
 }
 
@@ -89,7 +91,7 @@ static void AT_UartCB(void *pData)
 		gAT.RxDMABuf[0] = Uart_Rx(UART_ID2);
 		gAT.RxSize = 0;
 		Uart_RxDMAStart(AT_UART_ID, gAT.RxDMABuf + 1, AT_RX_LEN - 1);
-		Timer_Switch(AT_RX_TIMER, 1);
+		Timer_Restart(AT_RX_TIMER, AT_UART_TO);
 	}
 }
 
@@ -126,8 +128,6 @@ static void AT_RunToCB(void *pData)
 	AT_Reset();
 }
 
-
-
 static void AT_SendCurCmd(void)
 {
 	uint16_t TxLen;
@@ -154,7 +154,7 @@ static void AT_SendCurCmd(void)
 	}
 	if (TxLen < 64)
 	{
-		DBG("AT:%s", gAT.TxDMABuf);
+		DBG("AT TX: %s\r\n", gAT.TxDMABuf);
 	}
 	Uart_Tx(AT_UART_ID, gAT.TxDMABuf, TxLen);
 	if (gAT.CurCmd.To < 100)
@@ -167,7 +167,11 @@ static void AT_SendCurCmd(void)
 	}
 }
 
-
+static void AT_AnalyzeLineDone(void)
+{
+	gAT.ResultCnt = 0;
+	gAT.AnalyzeState = LLPARSE_STATE_IDLE;
+}
 
 /*
  * 从AT响应中读取1个字节，并更新读取的状态
@@ -217,8 +221,29 @@ static int32_t AT_AnalyzeByte(uint8_t Byte)
             gAT.ResultCnt = 1;
         }
         break;
-
+    case LLPARSE_STATE_RESULT_CR:
+    	AT_AnalyzeLineDone();
+        if (Byte == '\n')
+        {
+        	gAT.AnalyzeState = LLPARSE_STATE_IDLE;
+        }
+        else if(Byte == '\r')
+        {
+        	gAT.AnalyzeState = LLPARSE_STATE_IDLE_CR;
+        }
+        else if(Byte == '>')
+        {
+        	gAT.AnalyzeState = LLPARSE_STATE_PROMPT;
+        }
+        else
+        {
+        	gAT.AnalyzeState = LLPARSE_STATE_RESULT;
+            gAT.ResultBuf[0] = Byte;
+            gAT.ResultCnt = 1;
+        }
+    	break;
     case LLPARSE_STATE_RESULT_LF:
+    	AT_AnalyzeLineDone();
         if(gAT.PayloadMax)
         {
             gAT.Payload[0] = Byte;
@@ -247,7 +272,7 @@ static int32_t AT_AnalyzeByte(uint8_t Byte)
     case LLPARSE_STATE_RESULT:
         if (Byte == '\r')
         {
-        	gAT.AnalyzeState = LLPARSE_STATE_IDLE_CR;
+        	gAT.AnalyzeState = LLPARSE_STATE_RESULT_CR;
         }
         else
         {
@@ -259,6 +284,7 @@ static int32_t AT_AnalyzeByte(uint8_t Byte)
     case LLPARSE_STATE_RAWDATA:
         if(gAT.PayloadCnt >= gAT.PayloadMax )
         {
+        	AT_AnalyzeLineDone();
             if(Byte == '\r') {
             	gAT.AnalyzeState = LLPARSE_STATE_IDLE_CR;
             } else if(Byte == '>') {
@@ -296,16 +322,8 @@ static int32_t AT_AnalyzeByte(uint8_t Byte)
     	ret = ERROR_AT_ANALYZE_STATE;
         break;
     }
-
+    //DBG("%d\r\n", gAT.AnalyzeState);
     return ret;
-}
-
-static void AT_AnalyzeLineDone(void)
-{
-	gAT.ResultCnt = 0;
-	gAT.PayloadCnt = 0;
-	gAT.PayloadMax = 0;
-	gAT.AnalyzeState = LLPARSE_STATE_IDLE;
 }
 
 static void AT_AnalyzeResult(void)
@@ -432,7 +450,7 @@ void AT_Init(void)
 	InitRBuffer(&gAT.TxQueue, gAT.TxBuf, AT_TX_LEN, sizeof(AT_TxStruct));
 	Uart_Config(AT_UART_ID, AT_BR, AT_UartCB, 1);
 	Uart_RxDMAInit(AT_UART_ID);
-	Timer_Start(AT_RX_TIMER, 3, 1, AT_UartTimerCB);
+	Timer_Start(AT_RX_TIMER, AT_UART_TO, 1, AT_UartTimerCB);
 	Timer_Switch(AT_RX_TIMER, 0);
 	AT_Reset();
 }
@@ -445,6 +463,11 @@ void AT_AddReadCmd(int8_t *Cmd, MyCBFun_t CB)
 void AT_AddRunCmd(int8_t *Cmd, MyCBFun_t CB)
 {
 	AT_AddCmd(Cmd, NULL ,AT_CMD_RUN, 200, CB);
+}
+
+void AT_AddDirCmd(int8_t *Cmd, MyCBFun_t CB)
+{
+	AT_AddCmd(Cmd, NULL ,AT_CMD_DIR, 200, CB);
 }
 
 void AT_AddCmd(int8_t *Cmd, int8_t *Param, uint8_t Type, uint32_t To, MyCBFun_t CB)
@@ -481,13 +504,18 @@ void AT_Task(void *Param)
 	uint16_t i;
 	if (gAT.NewAnalyzeFlag)
 	{
-		DBG_INFO("%d", gAT.AnalyzeState);
+		gAT.NewAnalyzeFlag = 0;
+		if (gAT.AnalyzeSize < 64)
+		{
+			DBG("AT RX: %s\r\n", gAT.AnalyzeBuf);
+		}
 		for(i = 0;i < gAT.AnalyzeSize;i++)
 		{
 			if ( AT_AnalyzeByte(gAT.AnalyzeBuf[i]) < 0)
 			{
 				//请求重启模块;
 				DBG_ERR("!");
+				Link_Restart();
 				AT_Reset();
 				return;
 			}
@@ -496,15 +524,13 @@ void AT_Task(void *Param)
 				DBG_ERR("result data overflow!");
 				//对结果进行解析
 				AT_AnalyzeResult();
-				//解析完，解析状态恢复到IDLE
 				AT_AnalyzeLineDone();
+
 			}
-			if(gAT.AnalyzeState == LLPARSE_STATE_RESULT_LF)
+			if(gAT.AnalyzeState == LLPARSE_STATE_RESULT_CR)
 			{
 				//对结果进行解析
 				AT_AnalyzeResult();
-				//解析完，解析状态恢复到IDLE
-				AT_AnalyzeLineDone();
 			}
 
 			if( (gAT.AnalyzeState == LLPARSE_STATE_RAWDATA) && (gAT.PayloadCnt >= gAT.PayloadMax) )
@@ -531,7 +557,13 @@ RX_ANALYZE_DONE:
 	}
 }
 
-void AT_SendRawData(uint8_t *Data, uint16_t Len)
+void AT_TxRawData(uint8_t *Data, uint16_t Len)
 {
 	Uart_Tx(AT_UART_ID, Data, Len);
+}
+
+void AT_RxRawData(uint16_t len)
+{
+    gAT.PayloadMax = len;
+    gAT.PayloadCnt = 0;
 }

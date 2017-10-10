@@ -24,6 +24,7 @@ void DBG_CB(void *pData)
 	if (Type == UART_RX_IRQ)
 	{
 		RxData = Uart_Rx(DBG_UART_ID);
+		DBG("%c", RxData);
 	}
 }
 /**

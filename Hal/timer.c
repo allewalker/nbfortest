@@ -50,6 +50,17 @@ void Timer_Switch(uint8_t ID, uint8_t OnOff)
 	gSys.TimerList[ID].Work = OnOff;
 }
 
+void Timer_Restart(uint8_t ID, uint32_t To)
+{
+	if (ID >= TIMER_MAX)
+	{
+		return;
+	}
+	gSys.TimerList[ID].LastTime = To;
+	gSys.TimerList[ID].Work = 1;
+	gSys.TimerList[ID].ToFlag = 0;
+}
+
 void Timer_Del(uint8_t ID)
 {
 	if (ID >= TIMER_MAX)

@@ -14,6 +14,7 @@
 #include "config.h"
 #include "stm32f10x_conf.h"
 #include "CApi.h"
+#include "io.h"
 #include "nvram.h"
 #include "debug.h"
 #include "setting.h"
