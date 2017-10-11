@@ -24,8 +24,7 @@
 #include "at.h"
 #include "client.h"
 
-#define __NB_SIMCOM7000C__
-//#define __NB_BC95__
+
 enum VAR_ENUM
 {
 	CHIP_ID0,

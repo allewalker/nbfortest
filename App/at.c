@@ -3,7 +3,7 @@
 #define AT_DMA_LEN	(128)
 #define AT_TX_LEN	(32)
 #define AT_RESULT_LEN	(128)
-#define AT_UART_TO		(3)
+#define AT_UART_TO		(10)
 enum
 {
 	LLPARSE_STATE_IDLE,		/* idle, not parsing a response */
@@ -80,6 +80,10 @@ static void AT_UartTimerCB(void *pData)
 		gAT.AnalyzeSize = CopySize;
 		gAT.NewAnalyzeFlag = 1;
 		gAT.AnalyzeBuf[gAT.AnalyzeSize] = 0;
+		if (gAT.AnalyzeSize < 64)
+		{
+			DBG("AT RX: %s\r\n", gAT.AnalyzeBuf);
+		}
 	}
 }
 
@@ -225,7 +229,14 @@ static int32_t AT_AnalyzeByte(uint8_t Byte)
     	AT_AnalyzeLineDone();
         if (Byte == '\n')
         {
-        	gAT.AnalyzeState = LLPARSE_STATE_IDLE;
+        	if (gAT.PayloadMax)
+        	{
+        		gAT.AnalyzeState = LLPARSE_STATE_RESULT_LF;
+        	}
+        	else
+        	{
+        		gAT.AnalyzeState = LLPARSE_STATE_IDLE;
+        	}
         }
         else if(Byte == '\r')
         {
@@ -442,6 +453,7 @@ void AT_Reset(void)
 
 void AT_FinishCmd(void)
 {
+	DBG_INFO("%s done", gAT.CurCmd.CmdStr);
 	Timer_Del(AT_RUN_TIMER);
 	memset(&gAT.CurCmd, 0, sizeof(gAT.CurCmd));
 	if (gAT.TxQueue.Len)	//当前没有AT指令
@@ -511,10 +523,6 @@ void AT_Task(void *Param)
 	if (gAT.NewAnalyzeFlag)
 	{
 		gAT.NewAnalyzeFlag = 0;
-		if (gAT.AnalyzeSize < 64)
-		{
-			DBG("AT RX: %s\r\n", gAT.AnalyzeBuf);
-		}
 		for(i = 0;i < gAT.AnalyzeSize;i++)
 		{
 			if ( AT_AnalyzeByte(gAT.AnalyzeBuf[i]) < 0)
@@ -545,6 +553,7 @@ void AT_Task(void *Param)
 				Link_RxData(gAT.Payload, gAT.PayloadCnt);
 				//解析完，解析状态恢复到IDLE
 				AT_AnalyzeLineDone();
+				gAT.PayloadMax = 0;
 			}
 
 			if(gAT.AnalyzeState == LLPARSE_STATE_PROMPT)
@@ -554,7 +563,15 @@ void AT_Task(void *Param)
 			}
 		}
 	}
-
+	if( (gAT.AnalyzeState == LLPARSE_STATE_RAWDATA) && (gAT.PayloadCnt == (gAT.PayloadMax - 1)) )
+	{
+		//数据根据SMS还是SOCKET的，交给link
+		DBGF;
+		Link_RxData(gAT.Payload, gAT.PayloadCnt);
+		//解析完，解析状态恢复到IDLE
+		AT_AnalyzeLineDone();
+		gAT.PayloadMax = 0;
+	}
 RX_ANALYZE_DONE:
 	if (!gAT.CurCmd.TxType && gAT.TxQueue.Len)	//当前没有AT指令
 	{

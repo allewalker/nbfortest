@@ -1,7 +1,8 @@
 #ifndef __LINK_H__
 #define __LINK_H__
 #define SOCKET_MAX	(6)
-
+#define __NB_SIMCOM7000C__
+//#define __NB_BC95__
 enum
 {
 	LINK_MAIN_STATE_INIT,
@@ -59,6 +60,7 @@ typedef struct
 	uint8_t Req;
 }Link_ReqStruct;
 
+#ifdef __NB_SIMCOM7000C__
 typedef struct
 {
 	Link_ReqStruct ReqBuf[SOCKET_MAX];
@@ -78,6 +80,11 @@ typedef struct
 	uint8_t ActiveCheck;
 	int8_t TxSocketID;
 }Link_CtrlStruct;
+#endif
+
+#ifdef __NB_BC95__
+
+#endif
 void Link_Init(void);
 void Link_UrcAnalyze(int8_t *Str);
 void Link_RxData(uint8_t *Data, uint16_t Len);
