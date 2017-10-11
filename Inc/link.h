@@ -1,6 +1,5 @@
 #ifndef __LINK_H__
 #define __LINK_H__
-
 #define SOCKET_MAX	(6)
 
 enum
@@ -14,11 +13,10 @@ enum
 	LINK_SUB_STATE_POWER_ON,
 	LINK_SUB_STATE_WAIT_READY,
 	LINK_SUB_STATE_INIT_QUEUE,
+	LINK_SUB_STATE_WAIT_INIT_DONE,
 	LINK_SUB_STATE_WAIT_PIN,
 	LINK_SUB_STATE_WAIT_CGATT,
-	LINK_SUB_STATE_WAIT_IP_START,
-	LINK_SUB_STATE_WAIT_IP_GPRSACT,
-	LINK_SUB_STATE_WAIT_IP_STATUS,
+	LINK_SUB_STATE_WAIT_IP_OK,
 	LINK_SUB_STATE_RUN_IDLE,
 	LINK_SUB_STATE_CONNECT,
 	LINK_SUB_STATE_TX,
@@ -45,8 +43,6 @@ enum
 	LINK_IP_PDP_DEACT,
 };
 
-
-
 typedef struct
 {
 	void*			RxData;
@@ -67,16 +63,19 @@ typedef struct
 {
 	Link_ReqStruct ReqBuf[SOCKET_MAX];
 	RBuffer ReqList;
+	Link_ReqStruct CurReq;
 	void *TxBuf;
 	uint16_t TxLen;
 	uint8_t IPState;
 	uint32_t RxSocketID;
 	uint32_t RxLen;
 	MyCBFun_t NotifyCB[SOCKET_MAX];
-	uint8_t SocketState[SOCKET_MAX];
 	uint8_t MainState;					//link状态，包括初始化，激活网络，通讯，休眠
 	uint8_t SubState;
 	uint8_t ToFlag;
+	uint8_t PinCheck;
+	uint8_t AttachCheck;
+	uint8_t ActiveCheck;
 	int8_t TxSocketID;
 }Link_CtrlStruct;
 void Link_Init(void);
@@ -85,4 +84,6 @@ void Link_RxData(uint8_t *Data, uint16_t Len);
 void Link_TxData(void);
 void Link_Task(void *Param);
 void Link_Restart(void);
+void Link_RegSocket(uint8_t SocketID, MyCBFun_t CB);
+void Link_AddReq(uint8_t SocketID, uint8_t ReqType, void *Data, uint16_t Len);
 #endif

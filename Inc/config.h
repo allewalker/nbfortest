@@ -22,7 +22,9 @@
 
 #define DBG_UART_ID UART_ID1
 #define AT_UART_ID	UART_ID2
+#define DTU_UART_ID	UART_ID3
 #define AT_BR		(115200)
+#define DTU_BR		(9600)
 #define DBG_BR		(921600)
 
 /**********************************ERROR NO**********************************************/

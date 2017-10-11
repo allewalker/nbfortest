@@ -1,7 +1,7 @@
 #include "user.h"
 #define AT_RX_LEN	(1600)
 #define AT_DMA_LEN	(128)
-#define AT_TX_LEN	(16)
+#define AT_TX_LEN	(32)
 #define AT_RESULT_LEN	(128)
 #define AT_UART_TO		(3)
 enum
@@ -351,14 +351,16 @@ static void AT_AnalyzeResult(void)
 		Result.Data = Colon + 1;
 		Result.Size = (uint32_t)gAT.ResultBuf + AT_RESULT_LEN - 1 - (uint32_t)Colon;
 	}
-	else
-	{
-		Result.Data = gAT.ResultBuf;
-		Result.Size = gAT.ResultCnt;
-	}
+//	else
+//	{
+//		Result.Data = gAT.ResultBuf;
+//		Result.Size = gAT.ResultCnt;
+//	}
 	//如果有回调函数，根据当前正在执行的命令类型进行相应处理
 	if (gAT.CurCmd.cb)
 	{
+		Result.Data = gAT.ResultBuf;
+		Result.Size = gAT.ResultCnt;
 		switch (gAT.CurCmd.TxType)
 		{
 		case AT_CMD_READ:
@@ -367,6 +369,7 @@ static void AT_AnalyzeResult(void)
 			/*通过和发送的比较确认是不是当前命令的返回，如果是，则交给回调函数*/
 			if (!memcmp(&gAT.ResultBuf[1], gAT.CurCmd.CmdStr, strlen(gAT.CurCmd.CmdStr)))
 			{
+				//DBG_INFO("%s", gAT.ResultBuf);
 				gAT.CurCmd.cb((void *)&Result);
 				return;
 			}
@@ -384,6 +387,7 @@ static void AT_AnalyzeResult(void)
 	{
 		if (!memcmp(gAT.ResultBuf, AT_RESULT_CME, 10) || !memcmp(gAT.ResultBuf, AT_RESULT_CMS, 10))
 		{
+			Result.Data = NULL;
 			Result.Result = strtoul(Colon+1, NULL, 10) + 1;
 			if (gAT.CurCmd.TxType && gAT.CurCmd.cb)
 			{
@@ -399,6 +403,7 @@ static void AT_AnalyzeResult(void)
         {
              /*Part of Case 'C'*/
         	Result.Result = 1;
+        	Result.Data = NULL;
 			if (gAT.CurCmd.TxType && gAT.CurCmd.cb)
 			{
 				gAT.CurCmd.cb((void *)&Result);
@@ -411,6 +416,7 @@ static void AT_AnalyzeResult(void)
         {
              /*Part of Case 'C'*/
         	Result.Result = 0;
+        	Result.Data = NULL;
 			if (gAT.CurCmd.TxType && gAT.CurCmd.cb)
 			{
 				gAT.CurCmd.cb((void *)&Result);

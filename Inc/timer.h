@@ -19,7 +19,8 @@ enum
 	AT_RUN_TIMER,	//AT指令执行
 	COM_RX_TIMER,	//COM RX 接收超时
 	LINK_TIMER,
-	LINK_TIMER2,
+	LINK_RESET_TIMER,
+	CLIENT_TIMER,
 	TIMER_MAX
 };
 void Timer_Config(void);

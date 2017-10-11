@@ -6,7 +6,7 @@
 #define DBG_INFO(x,y...) DBG_Printf("%s %d:"x"\r\n", __FUNCTION__,__LINE__,##y)
 #define DBG_ERR(x,y...) DBG_Printf("%s %d:"x"\r\n", __FUNCTION__,__LINE__,##y)
 #define DBG(x,y...) DBG_Printf(x, ##y)
-#define DBGF	DBG_INFO("!")
+#define DBGF	DBG_ERR("!")
 #else
 #define DBG_FUNC(x,y...)
 #define DBG_INFO(x,y...)

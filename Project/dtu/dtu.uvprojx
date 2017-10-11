@@ -428,9 +428,19 @@
               <FilePath>..\..\App\at.c</FilePath>
             </File>
             <File>
-              <FileName>link.c</FileName>
+              <FileName>bc95.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\App\link.c</FilePath>
+              <FilePath>..\..\App\bc95.c</FilePath>
+            </File>
+            <File>
+              <FileName>client.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\App\client.c</FilePath>
+            </File>
+            <File>
+              <FileName>simcom7000c.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\App\simcom7000c.c</FilePath>
             </File>
           </Files>
         </Group>

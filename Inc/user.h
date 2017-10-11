@@ -22,8 +22,10 @@
 #include "usart.h"
 #include "link.h"
 #include "at.h"
+#include "client.h"
 
-
+#define __NB_SIMCOM7000C__
+//#define __NB_BC95__
 enum VAR_ENUM
 {
 	CHIP_ID0,
@@ -35,6 +37,8 @@ enum VAR_ENUM
 	UTC_DATE,
 	UTC_TIME,
 	SYS_VAR_MAX,
+
+	SOCKET_CLIENT_ID = 0,
 };
 
 typedef struct
@@ -48,6 +52,8 @@ typedef struct
 	RBuffer TraceBuffer;
 	uint8_t TraceData[DBG_BUF_SIZE];
 	uint8_t TraceDMA[DBG_BUF_SIZE];
+	int8_t IMSI[20];
+	int8_t IMEI[20];
 	Link_CtrlStruct *LinkCtrl;
 #ifdef __SYS_START_FROM_BOOTLOADER__
 	BL_ParamStruct BLStore;
