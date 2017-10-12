@@ -567,7 +567,8 @@ void Link_UrcAnalyze(int8_t *Str)
 	uint8_t Cmd[64];
 	if (strstr(Str, AT_SOCKET_REC))
 	{
-		DBG_INFO("%d need read %dbyte", RxSocketID, RxLen);
+		sscanf(Str, "+NSONMI:%d,%d", &RxSocketID, &RxLen);
+		//DBG_INFO("%d need read %dbyte", RxSocketID, RxLen);
 		sprintf(Cmd, "NSORF=%d,%d", RxSocketID, RxLen);
 		AT_AddRunCmd(Cmd, Link_UDPRxCB);
 	}

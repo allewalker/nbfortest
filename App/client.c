@@ -3,6 +3,7 @@ char* IP = "115.231.73.229";
 #define CONNECT_TO	(120)
 #define PORT (9888)
 #define UART_TO	(50)
+#define LTCC_DATA_LEN_MAX	264
 enum
 {
 	SOCKET_STATE_OFFLINE,
@@ -12,14 +13,19 @@ enum
 	SOCKET_STATE_WAIT_RX,
 };
 
+typedef struct
+{
+	uint8_t Data[LTCC_DATA_LEN_MAX];
+	uint32_t Len;
+}LTCC_CacheStruct;
 static uint32_t PackID;
 static uint8_t TxBuf[1460];
 static uint16_t TxLen;
+static LTCC_CacheStruct UartRx;
 static uint8_t SocketState;
-static uint8_t UartOK;
-static uint8_t Cache[4096];
+static LTCC_CacheStruct Cache[16];
 static RBuffer CacheBuf;
-
+static uint8_t ReSendFlag;
 static void Client_NotifyCB(void *pData)
 {
 	Link_NotifyStruct *Notify = (Link_NotifyStruct *)pData;
@@ -56,6 +62,9 @@ static void Client_NotifyCB(void *pData)
 		break;
 	case LINK_EVENT_TX_FAIL:
 		DBGF;
+		Link_Restart();
+		SocketState = SOCKET_STATE_OFFLINE;
+		ReSendFlag = 1;
 		//UDP模式下不需要
 //		Link_AddReq(SOCKET_CLIENT_ID, LINK_REQ_CLOSE, IP, PORT);
 //		SocketState = SOCKET_STATE_OFFLINE;
@@ -65,7 +74,8 @@ static void Client_NotifyCB(void *pData)
 
 static void Client_TOCB(void *pData)
 {
-	UartOK = 1;
+	WriteRBufferForce(&CacheBuf, &UartRx, 1);
+	UartRx.Len = 0;
 	Timer_Switch(CLIENT_TIMER, 0);
 }
 
@@ -75,9 +85,14 @@ static void Client_UartCB(void *pData)
 	uint8_t Temp;
 	if (Type == UART_RX_IRQ)
 	{
-		UartOK = 0;
 		Temp = Uart_Rx(DTU_UART_ID);
-		WriteRBufferForce(&CacheBuf, &Temp, 1);
+		UartRx.Data[UartRx.Len] = Temp;
+		UartRx.Len++;
+		if (UartRx.Len >= LTCC_DATA_LEN_MAX)
+		{
+			WriteRBufferForce(&CacheBuf, &UartRx, 1);
+			UartRx.Len = 0;
+		}
 		Timer_Restart(CLIENT_TIMER, UART_TO);
 	}
 }
@@ -86,7 +101,7 @@ void Client_Init(void)
 {
 	Link_RegSocket(SOCKET_CLIENT_ID, Client_NotifyCB);
 	SocketState = SOCKET_STATE_OFFLINE;
-	InitRBuffer(&CacheBuf, Cache, sizeof(Cache), 1);
+	InitRBuffer(&CacheBuf, Cache, sizeof(Cache)/sizeof(LTCC_CacheStruct), sizeof(LTCC_CacheStruct));
 	Uart_Config(DTU_UART_ID, DTU_BR, Client_UartCB, 1);
 	Timer_Start(CLIENT_TIMER, 50, 0, Client_TOCB);
 	Timer_Switch(CLIENT_TIMER, 0);
@@ -94,6 +109,7 @@ void Client_Init(void)
 
 void Client_Task(void *pData)
 {
+	LTCC_CacheStruct *Temp;
 	switch (SocketState)
 	{
 	case SOCKET_STATE_OFFLINE:
@@ -104,14 +120,23 @@ void Client_Task(void *pData)
 		break;
 	case SOCKET_STATE_ONLINE:
 		//检测是否需要发送数据
-		if (UartOK && CacheBuf.Len)
+		if (ReSendFlag)
 		{
-			PackID++;
-			TxLen = sprintf(TxBuf, "%d,%s,", PackID, gSys.IMEI);
-			TxLen += ReadRBuffer(&CacheBuf, &TxBuf[TxLen], 1024);
+			ReSendFlag = 0;
 			Link_AddReq(SOCKET_CLIENT_ID, LINK_REQ_TX, TxBuf, TxLen);
 			SocketState = SOCKET_STATE_WAIT_TX;
-			TxLen = 0;
+		}
+		else if (CacheBuf.Len)
+		{
+			PackID++;
+			memcpy(TxBuf, &PackID, 4);
+			memcpy(TxBuf + 4, gSys.IMEI, 15);
+			TxBuf[19] = XorCheck(TxBuf, 19, 0);
+			Temp = (LTCC_CacheStruct *)&TxBuf[20];
+			ReadRBuffer(&CacheBuf, Temp, 1);
+			TxLen = Temp->Len + 20;
+			Link_AddReq(SOCKET_CLIENT_ID, LINK_REQ_TX, TxBuf, TxLen);
+			SocketState = SOCKET_STATE_WAIT_TX;
 		}
 		break;
 	case SOCKET_STATE_WAIT_TX:
