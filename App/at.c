@@ -3,7 +3,11 @@
 #define AT_DMA_LEN	(128)
 #define AT_TX_LEN	(32)
 #define AT_RESULT_LEN	(128)
+#if (AT_BR == 9600)
 #define AT_UART_TO		(10)
+#else
+#define AT_UART_TO		(3)
+#endif
 enum
 {
 	LLPARSE_STATE_IDLE,		/* idle, not parsing a response */
@@ -25,11 +29,14 @@ typedef struct
 
 typedef struct
 {
+
 	uint32_t To;
 	uint8_t CmdStr[32];
 	uint8_t Param[64];
+	uint8_t *DirCmd;
+	uint16_t DirLen;
 	uint8_t TxType;
-	uint8_t pad[3];
+	uint8_t Pad;
 	MyCBFun_t cb;
 }AT_TxStruct;
 
@@ -80,9 +87,13 @@ static void AT_UartTimerCB(void *pData)
 		gAT.AnalyzeSize = CopySize;
 		gAT.NewAnalyzeFlag = 1;
 		gAT.AnalyzeBuf[gAT.AnalyzeSize] = 0;
-		if (gAT.AnalyzeSize < 64)
+		if (gAT.AnalyzeSize < 128)
 		{
 			DBG("AT RX: %s\r\n", gAT.AnalyzeBuf);
+		}
+		else
+		{
+			DBG_INFO("%d", gAT.AnalyzeSize);
 		}
 	}
 }
@@ -150,15 +161,21 @@ static void AT_SendCurCmd(void)
 		TxLen = snprintf(gAT.TxDMABuf, AT_DMA_LEN, "AT+%s\r", gAT.CurCmd.CmdStr);
 		break;
 	case AT_CMD_DIR:
-		TxLen = snprintf(gAT.TxDMABuf, AT_DMA_LEN, "AT%s\r", gAT.CurCmd.CmdStr);
+		strcpy(gAT.TxDMABuf, gAT.CurCmd.DirCmd);
+		TxLen = gAT.CurCmd.DirLen;
 		break;
 	default:
 		gAT.CurCmd.TxType = AT_CMD_NONE;
 		return;
 	}
-	if (TxLen < 64)
+
+	if (TxLen < 128)
 	{
 		DBG("AT TX: %s\r\n", gAT.TxDMABuf);
+	}
+	else
+	{
+		DBG_INFO("%d", TxLen);
 	}
 	Uart_Tx(AT_UART_ID, gAT.TxDMABuf, TxLen);
 	if (gAT.CurCmd.To < 100)
@@ -376,7 +393,7 @@ static void AT_AnalyzeResult(void)
 		{
 		case AT_CMD_READ:
 		case AT_CMD_WRITE:
-		case AT_CMD_DIR:
+
 			/*通过和发送的比较确认是不是当前命令的返回，如果是，则交给回调函数*/
 			if (!memcmp(&gAT.ResultBuf[1], gAT.CurCmd.CmdStr, strlen(gAT.CurCmd.CmdStr)))
 			{
@@ -386,6 +403,7 @@ static void AT_AnalyzeResult(void)
 			}
 			break;
 		case AT_CMD_RUN:
+		case AT_CMD_DIR:
 			/*如果是运行的指令，可能不返回‘+’，需要进入回调函数进行判断*/
 			gAT.CurCmd.cb((void *)&Result);
 			break;
@@ -453,7 +471,18 @@ void AT_Reset(void)
 
 void AT_FinishCmd(void)
 {
-	DBG_INFO("%s done", gAT.CurCmd.CmdStr);
+	if (gAT.CurCmd.CmdStr[0])
+	{
+		DBG_INFO("%s done", gAT.CurCmd.CmdStr);
+	}
+	else if (gAT.CurCmd.TxType == AT_CMD_DIR)
+	{
+		DBG_INFO("dir cmd done!");
+	}
+	else
+	{
+		DBGF;
+	}
 	Timer_Del(AT_RUN_TIMER);
 	memset(&gAT.CurCmd, 0, sizeof(gAT.CurCmd));
 	if (gAT.TxQueue.Len)	//当前没有AT指令
@@ -483,9 +512,10 @@ void AT_AddRunCmd(int8_t *Cmd, MyCBFun_t CB)
 	AT_AddCmd(Cmd, NULL ,AT_CMD_RUN, 200, CB);
 }
 
+//针对华为UDP发送的特殊指令
 void AT_AddDirCmd(int8_t *Cmd, MyCBFun_t CB)
 {
-	AT_AddCmd(Cmd, NULL ,AT_CMD_DIR, 200, CB);
+	AT_AddCmd(Cmd, NULL ,AT_CMD_DIR, 1000, CB);
 }
 
 void AT_AddCmd(int8_t *Cmd, int8_t *Param, uint8_t Type, uint32_t To, MyCBFun_t CB)
@@ -496,11 +526,19 @@ void AT_AddCmd(int8_t *Cmd, int8_t *Param, uint8_t Type, uint32_t To, MyCBFun_t 
 		return;
 	}
 	memset(&Tx, 0, sizeof(Tx));
-	strncpy(Tx.CmdStr, Cmd, sizeof(Tx.CmdStr) - 1);
-
-	if (Param)
+	if (Type == AT_CMD_DIR)
 	{
-		strncpy(Tx.Param, Param, sizeof(Tx.Param) - 1);
+		Tx.DirCmd = Cmd;
+		Tx.DirLen = strlen(Cmd);
+		Tx.CmdStr[0] = 0;
+	}
+	else
+	{
+		strncpy(Tx.CmdStr, Cmd, sizeof(Tx.CmdStr) - 1);
+		if (Param)
+		{
+			strncpy(Tx.Param, Param, sizeof(Tx.Param) - 1);
+		}
 	}
 
 	Tx.TxType = Type;

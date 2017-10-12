@@ -1,6 +1,6 @@
 #ifndef __DEBUG_H__
 #define __DEBUG_H__
-#define DBG_BUF_SIZE (256)
+#define DBG_BUF_SIZE (512)
 
 #if 1
 #define DBG_INFO(x,y...) DBG_Printf("%s %d:"x"\r\n", __FUNCTION__,__LINE__,##y)

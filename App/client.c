@@ -56,8 +56,9 @@ static void Client_NotifyCB(void *pData)
 		break;
 	case LINK_EVENT_TX_FAIL:
 		DBGF;
-		Link_AddReq(SOCKET_CLIENT_ID, LINK_REQ_CLOSE, IP, PORT);
-		SocketState = SOCKET_STATE_OFFLINE;
+		//UDP模式下不需要
+//		Link_AddReq(SOCKET_CLIENT_ID, LINK_REQ_CLOSE, IP, PORT);
+//		SocketState = SOCKET_STATE_OFFLINE;
 		break;
 	}
 }

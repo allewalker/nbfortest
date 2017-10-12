@@ -1,8 +1,8 @@
 #ifndef __LINK_H__
 #define __LINK_H__
 #define SOCKET_MAX	(6)
-#define __NB_SIMCOM7000C__
-//#define __NB_BC95__
+//#define __NB_SIMCOM7000C__
+#define __NB_BC95__
 enum
 {
 	LINK_MAIN_STATE_INIT,
@@ -61,6 +61,7 @@ typedef struct
 }Link_ReqStruct;
 
 #ifdef __NB_SIMCOM7000C__
+#define AT_BR		(115200)
 typedef struct
 {
 	Link_ReqStruct ReqBuf[SOCKET_MAX];
@@ -83,7 +84,25 @@ typedef struct
 #endif
 
 #ifdef __NB_BC95__
+#define AT_BR		(9600)
+typedef struct
+{
+	Link_ReqStruct ReqBuf[SOCKET_MAX];
+	RBuffer ReqList;
+	Link_ReqStruct CurReq;
+	uint8_t TxBuf[1200];			//华为特殊的AT指令
+	uint8_t RxBuf[512];				//华为特殊的AT指令
+	MyCBFun_t NotifyCB[SOCKET_MAX];
 
+	int8_t *IP[SOCKET_MAX];
+	uint16_t Port[SOCKET_MAX];
+	uint8_t MainState;					//link状态，包括初始化，激活网络，通讯，休眠
+	uint8_t SubState;
+	uint8_t ToFlag;
+	uint8_t AttachCheck;
+	int8_t TxSocketID;
+	uint8_t SocketBit;
+}Link_CtrlStruct;
 #endif
 void Link_Init(void);
 void Link_UrcAnalyze(int8_t *Str);

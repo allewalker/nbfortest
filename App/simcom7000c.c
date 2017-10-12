@@ -20,7 +20,7 @@ enum
 
 const char *Link_InitCmdQueue[] =
 {
-		"E0",
+		"ATE0\r",
 		"CMEE=1",
 		"CFUN=1",
 		"CNMP=38",
