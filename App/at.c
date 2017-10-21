@@ -72,11 +72,11 @@ static void AT_UartTimerCB(void *pData)
 	else
 	{
 		Timer_Switch(AT_RX_TIMER, 0);
-		gAT.RxSize++;
+		gAT.RxSize = RxSize + 1;
 		Uart_RxDMAStop(AT_UART_ID);
-		if (RxSize <= AT_RX_LEN)
+		if (gAT.RxSize <= AT_RX_LEN)
 		{
-			CopySize = RxSize;
+			CopySize = gAT.RxSize;
 		}
 		else
 		{
@@ -242,34 +242,7 @@ static int32_t AT_AnalyzeByte(uint8_t Byte)
             gAT.ResultCnt = 1;
         }
         break;
-    case LLPARSE_STATE_RESULT_CR:
-    	AT_AnalyzeLineDone();
-        if (Byte == '\n')
-        {
-        	if (gAT.PayloadMax)
-        	{
-        		gAT.AnalyzeState = LLPARSE_STATE_RESULT_LF;
-        	}
-        	else
-        	{
-        		gAT.AnalyzeState = LLPARSE_STATE_IDLE;
-        	}
-        }
-        else if(Byte == '\r')
-        {
-        	gAT.AnalyzeState = LLPARSE_STATE_IDLE_CR;
-        }
-        else if(Byte == '>')
-        {
-        	gAT.AnalyzeState = LLPARSE_STATE_PROMPT;
-        }
-        else
-        {
-        	gAT.AnalyzeState = LLPARSE_STATE_RESULT;
-            gAT.ResultBuf[0] = Byte;
-            gAT.ResultCnt = 1;
-        }
-    	break;
+
     case LLPARSE_STATE_RESULT_LF:
     	AT_AnalyzeLineDone();
         if(gAT.PayloadMax)
@@ -300,7 +273,7 @@ static int32_t AT_AnalyzeByte(uint8_t Byte)
     case LLPARSE_STATE_RESULT:
         if (Byte == '\r')
         {
-        	gAT.AnalyzeState = LLPARSE_STATE_RESULT_CR;
+        	gAT.AnalyzeState = LLPARSE_STATE_IDLE_CR;
         }
         else
         {
@@ -579,7 +552,7 @@ void AT_Task(void *Param)
 				AT_AnalyzeLineDone();
 
 			}
-			if(gAT.AnalyzeState == LLPARSE_STATE_RESULT_CR)
+			if(gAT.AnalyzeState == LLPARSE_STATE_RESULT_LF)
 			{
 				//对结果进行解析
 				AT_AnalyzeResult();
@@ -601,15 +574,7 @@ void AT_Task(void *Param)
 			}
 		}
 	}
-	if( (gAT.AnalyzeState == LLPARSE_STATE_RAWDATA) && (gAT.PayloadCnt == (gAT.PayloadMax - 1)) )
-	{
-		//数据根据SMS还是SOCKET的，交给link
-		DBGF;
-		Link_RxData(gAT.Payload, gAT.PayloadCnt);
-		//解析完，解析状态恢复到IDLE
-		AT_AnalyzeLineDone();
-		gAT.PayloadMax = 0;
-	}
+
 RX_ANALYZE_DONE:
 	if (!gAT.CurCmd.TxType && gAT.TxQueue.Len)	//当前没有AT指令
 	{
